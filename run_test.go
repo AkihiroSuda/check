@@ -196,7 +196,107 @@ func (s *RunS) TestPrintRunError(c *C) {
 // -----------------------------------------------------------------------
 // Verify that the method pattern flag works correctly.
 
-func (s *RunS) TestFilterTestName(c *C) {
+func (s *RunS) TestFiltersTestName(c *C) {
+	helper := FixtureHelper{}
+	output := String{}
+	runConf := RunConf{Output: &output, Filters: []string{"Test[91]"}}
+	Run(&helper, &runConf)
+	c.Check(helper.calls[0], Equals, "SetUpSuite")
+	c.Check(helper.calls[1], Equals, "SetUpTest")
+	c.Check(helper.calls[2], Equals, "Test1")
+	c.Check(helper.calls[3], Equals, "TearDownTest")
+	c.Check(helper.calls[4], Equals, "TearDownSuite")
+	c.Check(len(helper.calls), Equals, 5)
+}
+
+func (s *RunS) TestFiltersTestNameWithAll(c *C) {
+	helper := FixtureHelper{}
+	output := String{}
+	runConf := RunConf{Output: &output, Filters: []string{".*"}}
+	Run(&helper, &runConf)
+	c.Check(helper.calls[0], Equals, "SetUpSuite")
+	c.Check(helper.calls[1], Equals, "SetUpTest")
+	c.Check(helper.calls[2], Equals, "Test1")
+	c.Check(helper.calls[3], Equals, "TearDownTest")
+	c.Check(helper.calls[4], Equals, "SetUpTest")
+	c.Check(helper.calls[5], Equals, "Test2")
+	c.Check(helper.calls[6], Equals, "TearDownTest")
+	c.Check(helper.calls[7], Equals, "TearDownSuite")
+	c.Check(len(helper.calls), Equals, 8)
+}
+
+func (s *RunS) TestFiltersSuiteName(c *C) {
+	helper := FixtureHelper{}
+	output := String{}
+	runConf := RunConf{Output: &output, Filters: []string{"FixtureHelper"}}
+	Run(&helper, &runConf)
+	c.Check(helper.calls[0], Equals, "SetUpSuite")
+	c.Check(helper.calls[1], Equals, "SetUpTest")
+	c.Check(helper.calls[2], Equals, "Test1")
+	c.Check(helper.calls[3], Equals, "TearDownTest")
+	c.Check(helper.calls[4], Equals, "SetUpTest")
+	c.Check(helper.calls[5], Equals, "Test2")
+	c.Check(helper.calls[6], Equals, "TearDownTest")
+	c.Check(helper.calls[7], Equals, "TearDownSuite")
+	c.Check(len(helper.calls), Equals, 8)
+}
+
+func (s *RunS) TestFiltersSuiteNameAndTestName(c *C) {
+	helper := FixtureHelper{}
+	output := String{}
+	runConf := RunConf{Output: &output, Filters: []string{"FixtureHelper\\.Test2"}}
+	Run(&helper, &runConf)
+	c.Check(helper.calls[0], Equals, "SetUpSuite")
+	c.Check(helper.calls[1], Equals, "SetUpTest")
+	c.Check(helper.calls[2], Equals, "Test2")
+	c.Check(helper.calls[3], Equals, "TearDownTest")
+	c.Check(helper.calls[4], Equals, "TearDownSuite")
+	c.Check(len(helper.calls), Equals, 5)
+}
+
+func (s *RunS) TestFiltersAllOut(c *C) {
+	helper := FixtureHelper{}
+	output := String{}
+	runConf := RunConf{Output: &output, Filters: []string{"NotFound"}}
+	Run(&helper, &runConf)
+	c.Check(len(helper.calls), Equals, 0)
+}
+
+func (s *RunS) TestRequirePartialMatch(c *C) {
+	helper := FixtureHelper{}
+	output := String{}
+	runConf := RunConf{Output: &output, Filters: []string{"est"}}
+	Run(&helper, &runConf)
+	c.Check(len(helper.calls), Equals, 8)
+}
+
+func (s *RunS) TestFiltersError(c *C) {
+	helper := FixtureHelper{}
+	output := String{}
+	runConf := RunConf{Output: &output, Filters: []string{"]["}}
+	result := Run(&helper, &runConf)
+	c.Check(result.String(), Equals,
+		"ERROR: Bad filter expression: error parsing regexp: missing closing ]: `[`")
+	c.Check(len(helper.calls), Equals, 0)
+}
+
+func (s *RunS) TestFiltersMultiple(c *C) {
+	helper := FixtureHelper{}
+	output := String{}
+	runConf := RunConf{Output: &output, Filters: []string{"Test1", "Test2"}}
+	Run(&helper, &runConf)
+	c.Check(helper.calls[0], Equals, "SetUpSuite")
+	c.Check(helper.calls[1], Equals, "SetUpTest")
+	c.Check(helper.calls[2], Equals, "Test1")
+	c.Check(helper.calls[3], Equals, "TearDownTest")
+	c.Check(helper.calls[4], Equals, "SetUpTest")
+	c.Check(helper.calls[5], Equals, "Test2")
+	c.Check(helper.calls[6], Equals, "TearDownTest")
+	c.Check(helper.calls[7], Equals, "TearDownSuite")
+	c.Check(len(helper.calls), Equals, 8)
+}
+
+func (s *RunS) TestOldFilter(c *C) {
 	helper := FixtureHelper{}
 	output := String{}
 	runConf := RunConf{Output: &output, Filter: "Test[91]"}
@@ -209,74 +309,13 @@ func (s *RunS) TestFilterTestName(c *C) {
 	c.Check(len(helper.calls), Equals, 5)
 }
 
-func (s *RunS) TestFilterTestNameWithAll(c *C) {
+func (s *RunS) TestOldFilterError(c *C) {
 	helper := FixtureHelper{}
 	output := String{}
-	runConf := RunConf{Output: &output, Filter: ".*"}
-	Run(&helper, &runConf)
-	c.Check(helper.calls[0], Equals, "SetUpSuite")
-	c.Check(helper.calls[1], Equals, "SetUpTest")
-	c.Check(helper.calls[2], Equals, "Test1")
-	c.Check(helper.calls[3], Equals, "TearDownTest")
-	c.Check(helper.calls[4], Equals, "SetUpTest")
-	c.Check(helper.calls[5], Equals, "Test2")
-	c.Check(helper.calls[6], Equals, "TearDownTest")
-	c.Check(helper.calls[7], Equals, "TearDownSuite")
-	c.Check(len(helper.calls), Equals, 8)
-}
-
-func (s *RunS) TestFilterSuiteName(c *C) {
-	helper := FixtureHelper{}
-	output := String{}
-	runConf := RunConf{Output: &output, Filter: "FixtureHelper"}
-	Run(&helper, &runConf)
-	c.Check(helper.calls[0], Equals, "SetUpSuite")
-	c.Check(helper.calls[1], Equals, "SetUpTest")
-	c.Check(helper.calls[2], Equals, "Test1")
-	c.Check(helper.calls[3], Equals, "TearDownTest")
-	c.Check(helper.calls[4], Equals, "SetUpTest")
-	c.Check(helper.calls[5], Equals, "Test2")
-	c.Check(helper.calls[6], Equals, "TearDownTest")
-	c.Check(helper.calls[7], Equals, "TearDownSuite")
-	c.Check(len(helper.calls), Equals, 8)
-}
-
-func (s *RunS) TestFilterSuiteNameAndTestName(c *C) {
-	helper := FixtureHelper{}
-	output := String{}
-	runConf := RunConf{Output: &output, Filter: "FixtureHelper\\.Test2"}
-	Run(&helper, &runConf)
-	c.Check(helper.calls[0], Equals, "SetUpSuite")
-	c.Check(helper.calls[1], Equals, "SetUpTest")
-	c.Check(helper.calls[2], Equals, "Test2")
-	c.Check(helper.calls[3], Equals, "TearDownTest")
-	c.Check(helper.calls[4], Equals, "TearDownSuite")
-	c.Check(len(helper.calls), Equals, 5)
-}
-
-func (s *RunS) TestFilterAllOut(c *C) {
-	helper := FixtureHelper{}
-	output := String{}
-	runConf := RunConf{Output: &output, Filter: "NotFound"}
-	Run(&helper, &runConf)
-	c.Check(len(helper.calls), Equals, 0)
-}
-
-func (s *RunS) TestRequirePartialMatch(c *C) {
-	helper := FixtureHelper{}
-	output := String{}
-	runConf := RunConf{Output: &output, Filter: "est"}
-	Run(&helper, &runConf)
-	c.Check(len(helper.calls), Equals, 8)
-}
-
-func (s *RunS) TestFilterError(c *C) {
-	helper := FixtureHelper{}
-	output := String{}
-	runConf := RunConf{Output: &output, Filter: "]["}
+	runConf := RunConf{Output: &output, Filters: []string{"a"}, Filter: "b"}
 	result := Run(&helper, &runConf)
 	c.Check(result.String(), Equals,
-		"ERROR: Bad filter expression: error parsing regexp: missing closing ]: `[`")
+		"ERROR: Filter and Filters cannot be both set")
 	c.Check(len(helper.calls), Equals, 0)
 }
 
@@ -284,7 +323,7 @@ func (s *RunS) TestFilterError(c *C) {
 // Verify that List works correctly.
 
 func (s *RunS) TestListFiltered(c *C) {
-	names := List(&FixtureHelper{}, &RunConf{Filter: "1"})
+	names := List(&FixtureHelper{}, &RunConf{Filters: []string{"1"}})
 	c.Assert(names, DeepEquals, []string{
 		"FixtureHelper.Test1",
 	})
