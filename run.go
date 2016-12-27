@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -34,15 +36,16 @@ var (
 	oldListFlag    = flag.Bool("gocheck.list", false, "List the names of all tests that will be run")
 	oldWorkFlag    = flag.Bool("gocheck.work", false, "Display and do not remove the test working directory")
 
-	newFilterFlag  = flag.String("check.f", "", "Regular expression selecting which tests and/or suites to run")
-	newVerboseFlag = flag.Bool("check.v", false, "Verbose mode")
-	newStreamFlag  = flag.Bool("check.vv", false, "Super verbose mode (disables output caching)")
-	newBenchFlag   = flag.Bool("check.b", false, "Run benchmarks")
-	newBenchTime   = flag.Duration("check.btime", 1*time.Second, "approximate run time for each benchmark")
-	newBenchMem    = flag.Bool("check.bmem", false, "Report memory benchmarks")
-	newListFlag    = flag.Bool("check.list", false, "List the names of all tests that will be run")
-	newWorkFlag    = flag.Bool("check.work", false, "Display and do not remove the test working directory")
-	checkTimeout   = flag.String("check.timeout", "", "Panic if test runs longer than specified duration")
+	newFilterFlag    = flag.String("check.f", "", "Regular expression selecting which tests and/or suites to run")
+	newVerboseFlag   = flag.Bool("check.v", false, "Verbose mode")
+	newStreamFlag    = flag.Bool("check.vv", false, "Super verbose mode (disables output caching)")
+	newBenchFlag     = flag.Bool("check.b", false, "Run benchmarks")
+	newBenchTime     = flag.Duration("check.btime", 1*time.Second, "approximate run time for each benchmark")
+	newBenchMem      = flag.Bool("check.bmem", false, "Report memory benchmarks")
+	newListFlag      = flag.Bool("check.list", false, "List the names of all tests that will be run")
+	newWorkFlag      = flag.Bool("check.work", false, "Display and do not remove the test working directory")
+	checkTimeout     = flag.String("check.timeout", "", "Panic if test runs longer than specified duration")
+	checkFiltersFile = flag.String("check.ffile", "", "A path to a LF-separated file that contains filter strings (OR-match)")
 )
 
 // TestingT runs all test suites registered with the Suite function,
@@ -53,8 +56,21 @@ func TestingT(testingT *testing.T) {
 	if benchTime == 1*time.Second {
 		benchTime = *oldBenchTime
 	}
+	var filters []string
+	if *checkFiltersFile != "" {
+		if *oldFilterFlag+*newFilterFlag != "" {
+			testingT.Fatal("check.f and check.ffile cannot be both set")
+		}
+		var err error
+		filters, err = loadFiltersFile(*checkFiltersFile)
+		if err != nil {
+			testingT.Fatalf("error parsing ffile: %v", err)
+		}
+	} else {
+		filters = []string{*oldFilterFlag + *newFilterFlag}
+	}
 	conf := &RunConf{
-		Filter:        *oldFilterFlag + *newFilterFlag,
+		Filters:       filters,
 		Verbose:       *oldVerboseFlag || *newVerboseFlag,
 		Stream:        *oldStreamFlag || *newStreamFlag,
 		Benchmark:     *oldBenchFlag || *newBenchFlag,
@@ -180,4 +196,25 @@ func (r *Result) String() string {
 		value += "\nWORK=" + r.WorkDir
 	}
 	return value
+}
+
+// loadFilters file loads a file that contains filter strings.
+// Spec:
+//  - LF-separated
+//  - Empty lines are ignored
+//  - No comment char at the moment
+func loadFiltersFile(f string) ([]string, error) {
+	b, err := ioutil.ReadFile(f)
+	if err != nil {
+		return nil, err
+	}
+	lines := strings.Split(string(b), "\n")
+	var filters []string
+	for _, l := range lines {
+		filter := strings.TrimSpace(l)
+		if filter != "" {
+			filters = append(filters, filter)
+		}
+	}
+	return filters, nil
 }

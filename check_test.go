@@ -22,7 +22,9 @@ var suitesRun int = 0
 
 func Test(t *testing.T) {
 	TestingT(t)
-	if suitesRun != suitesRunExpected && flag.Lookup("check.f").Value.String() == "" {
+	noFilter := flag.Lookup("check.f").Value.String() == "" &&
+		flag.Lookup("check.ffile").Value.String() == ""
+	if suitesRun != suitesRunExpected && noFilter {
 		critical(fmt.Sprintf("Expected %d suites to run rather than %d",
 			suitesRunExpected, suitesRun))
 	}

@@ -42,7 +42,7 @@ func (s *BenchmarkS) TestBenchmark(c *C) {
 		Output:        &output,
 		Benchmark:     true,
 		BenchmarkTime: 10000000,
-		Filter:        "Benchmark1",
+		Filters:        []string{"Benchmark1"},
 	}
 	Run(&helper, &runConf)
 	c.Check(helper.calls[0], Equals, "SetUpSuite")
@@ -65,7 +65,7 @@ func (s *BenchmarkS) TestBenchmarkBytes(c *C) {
 		Output:        &output,
 		Benchmark:     true,
 		BenchmarkTime: 10000000,
-		Filter:        "Benchmark2",
+		Filters:        []string{"Benchmark2"},
 	}
 	Run(&helper, &runConf)
 
@@ -81,7 +81,7 @@ func (s *BenchmarkS) TestBenchmarkMem(c *C) {
 		Benchmark:     true,
 		BenchmarkMem:  true,
 		BenchmarkTime: 10000000,
-		Filter:        "Benchmark3",
+		Filters:        []string{"Benchmark3"},
 	}
 	Run(&helper, &runConf)
 
